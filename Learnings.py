@@ -86,12 +86,7 @@ class Classifications:
         from sklearn.ensemble import AdaBoostClassifier
         model = AdaBoostClassifier(**kwargs)
         model.fit(self.X_train, self.y_train)
-        # if is_trade::
-        #     from sklearn.utils import shuffle
-        #     df = shuffle(df)
-        #     X = df.drop('BS', axis=1)
-        #     y = pd.to_numeric(df['BS'], downcast='integer')
-        #     model.fit(X, y)
+
         self.model = model
         return model
 
