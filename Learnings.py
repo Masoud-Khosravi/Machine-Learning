@@ -241,3 +241,196 @@ class Classifications:
             cm_display = ConfusionMatrixDisplay(confusion_matrix=conf_m)
             cm_display.plot()
             plt.show()
+
+
+class Regression:
+    X = None
+    y = None
+    X_train = None
+    X_test = None
+    y_train = None
+    y_test = None
+    model = None
+    test_size = 0.1
+    is_tensor = False
+    df_y = None
+
+    def __init__(self, X, y, test_size=0.1):
+        """
+        X - independent features(excluding target variable)
+        y - dependent variables, called (target).
+        test_size : for evaluate data after training
+        """
+        self.X = X
+        self.y = y
+        self.test_size = test_size
+        self._train_test_split()
+
+        # create an inner class object
+        self.evaluates = self.Evaluates(self)
+
+    def _train_test_split(self):
+        from sklearn.model_selection import train_test_split
+        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(self.X, self.y,
+                                                                                test_size=self.test_size,
+                                                                                random_state=42)
+
+    def support_vector_regression(self, **kwargs):
+        """
+        Default values is:
+            kernel = "rbf",
+            degree = 3,
+            gamma = "scale",
+            tol = 0.001,
+            C = 1,
+            epsilon = 0.1
+            ,...
+        returns model
+        """
+        if len(kwargs) < 1:
+            kwargs = dict(kernel="rbf",
+                          degree=3,
+                          C=1,
+                          epsilon=0.1)
+
+        self.is_tensor = False
+        from sklearn.svm import SVR
+        model = SVR(**kwargs)
+        model.fit(self.X_train, self.y_train)
+
+        self.model = model
+        return model
+
+    def decision_tree_regressor(self, **kwargs):
+        """
+        Default values is:
+            criterion = "squared_error",
+            splitter = "best",
+            random_state = None
+            ,...
+
+        returns model
+        """
+        if len(kwargs) < 1:
+            kwargs = dict(criterion="squared_error",
+                          splitter="best")
+
+        self.is_tensor = False
+        from sklearn.tree import DecisionTreeRegressor
+        model = DecisionTreeRegressor(**kwargs)
+        model.fit(self.X_train, self.y_train)
+
+        self.model = model
+        return model
+
+    def ridge(self, **kwargs):
+        """
+        Default values is:
+            alpha: float = 1
+            ,...
+
+        returns model
+        """
+        if len(kwargs) < 1:
+            kwargs = dict(alpha=1)
+
+        self.is_tensor = False
+        # from sklearn.preprocessing import PolynomialFeatures
+        # poly_converters = PolynomialFeatures(degree=2, include_bias=False)
+        # poly_X = poly_converters.fit_transform(self.X)
+        # from sklearn.model_selection import train_test_split
+        # self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(poly_X, self.y, test_size=0.1,
+        #                                                                         random_state=42)
+        from sklearn.linear_model import Ridge
+        model = Ridge(**kwargs)
+        model.fit(self.X_train, self.y_train)
+
+        self.model = model
+        return model
+
+    def tensorflow(self, epochs=800, *kwargs):
+        """
+        Default values is:
+            optimizer=tf.keras.optimizers.RMSprop(learning_rate=0.001),
+            loss=tf.keras.losses.mean_squared_error,
+
+        returns model
+        """
+
+        # Because My Cpu is faster than vga, so I create this model by cpu
+        # if you have Better VGA you can delete this two rows
+        import os
+        os.environ['CUDA_VISIBLE_DEVICES'] = '-1'  # only cpu
+
+        import tensorflow as tf
+        if len(kwargs) < 1:
+            kwargs = dict(optimizer=tf.keras.optimizers.RMSprop(learning_rate=0.001),
+                          loss=tf.keras.losses.mean_squared_error)
+        self.is_tensor = True
+
+        # from tensorflow import keras
+        from keras.models import Sequential
+        from keras.layers import Dense, Dropout
+
+        model = Sequential()
+        model.add(Dense(units=32, activation='relu', input_shape=(11,)))
+        model.add(Dropout(0.1))
+        model.add(Dense(units=32, activation='relu'))
+        model.add(Dropout(0.2))
+        model.add(Dense(units=32, activation='relu'))
+        model.add(Dropout(0.1))
+        model.add(Dense(units=16, activation='relu'))
+        model.add(Dense(units=1))
+
+        # Compile model
+        model.compile(**kwargs)
+
+        model.fit(x=self.X_train, y=self.y_train, epochs=epochs, validation_data=(self.X_test, self.y_test), verbose=0)
+
+        self.model = model
+        return model
+
+    class Evaluates:
+        def __init__(self, parent):
+            self.parent = parent
+
+        def mean_errors(self, printing=True):
+            """
+            if you want print result :printing=True
+            :return: Root_mean_squared_error
+            """
+            model = self.parent.model
+            from sklearn.metrics import mean_absolute_error, mean_squared_error
+            import pandas as pd
+            import numpy as np
+            if self.parent.is_tensor:
+                predict_x = model.predict(self.parent.X_test)
+                y_pred = pd.Series(predict_x.reshape(len(self.parent.y_test), ))
+            else:
+                y_pred = pd.Series(model.predict(self.parent.X_test))
+
+            pred_df = pd.DataFrame(self.parent.y_test).reset_index(drop=True)
+            pred_df = pd.concat([pred_df, y_pred], axis=1)
+            pred_df.columns = ['y_test', 'y_pred']
+
+            Root_MSE = 0
+            if printing:
+                MAE = mean_absolute_error(pred_df['y_test'], pred_df['y_pred'])
+                MSE = mean_squared_error(pred_df['y_test'], pred_df['y_pred'])
+                Root_MSE = np.sqrt(MSE)
+                print('MAE=', MAE)
+                print('MSE=', MSE)
+                print('Root MSE=', Root_MSE)
+
+            self.parent.df_y = pred_df
+            return Root_MSE
+
+        def plot_df_y(self):
+            # to crate df_y
+            self.mean_errors(printing=False)
+
+            import matplotlib.pyplot as plt
+            import seaborn as sns
+
+            sns.scatterplot(data=self.parent.df_y, x='y_test', y='y_pred')
+            plt.show()
