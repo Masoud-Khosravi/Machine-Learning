@@ -42,6 +42,8 @@ class Classifications:
             random_state=None,
             verbose=0,
             n_jobs=-1
+            
+        returns model
         """
         if len(kwargs) < 1:
             kwargs = dict(n_estimators=128,
@@ -75,6 +77,8 @@ class Classifications:
             learning_rate=0.7,
             algorithm='SAMME.R',
             random_state=None
+                        
+        returns model
         """
         if len(kwargs) < 1:
             kwargs = dict(n_estimators=384,
@@ -99,6 +103,8 @@ class Classifications:
                     n_neighbors=4,
                     p=1,
                     weights=distance
+                    
+        returns model            
         """
         if len(kwargs) < 1:
             kwargs = dict({'algorithm': 'auto',
@@ -121,6 +127,8 @@ class Classifications:
                     criterion='entropy',
                     splitter='random',
                     random_state=3
+                    
+        returns model            
         """
         if len(kwargs) < 1:
             kwargs = dict({'criterion': 'entropy',
@@ -140,6 +148,8 @@ class Classifications:
                     gamma='entropy',
                     splitter='random',
                     verbose=True
+                    
+        returns model            
         """
         if len(kwargs) < 1:
             kwargs = dict({'gamma': 'scale',
@@ -159,6 +169,8 @@ class Classifications:
             optimizer='adam',
             loss='sparse_categorical_crossentropy',
             metrics=['sparse_categorical_crossentropy']
+                    
+        returns model    
         """
         if len(kwargs) < 1:
             kwargs = dict(optimizer='adam',
